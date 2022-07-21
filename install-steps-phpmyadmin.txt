@@ -1,0 +1,63 @@
+## Prepare to download and download
+mkdir -p /root/phpmyadmin-install
+wget --directory-prefix=/root/phpmyadmin-install https://files.phpmyadmin.net/phpMyAdmin/5.2.0/phpMyAdmin-5.2.0-all-languages.tar.gz
+tar -xzf /root/phpmyadmin-install/phpMyAdmin-5.2.0-all-languages.tar.gz -C /usr/share/
+mv /usr/share/phpMyAdmin-5.2.0-all-languages /usr/share/phpmyadmin-5.2.0
+rm -rf /usr/share/phpmyadmin
+ln -s -r /usr/share/phpmyadmin-5.2.0 /usr/share/phpmyadmin
+
+
+## Prepare to install
+mkdir -p /var/www/apps/phpmyadmin/temp
+chown -R ispapps:www-data /var/www/apps/phpmyadmin
+chmod 0775 /var/www/apps/phpmyadmin/temp
+
+
+## SQL
+CREATE DATABASE phpmyadmin CHARACTER SET utf8;
+CREATE USER 'phpmyadmin'@'localhost';
+GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'phpmyadmin'@'localhost' IDENTIFIED BY '###PASSWORD###';
+CREATE USER 'pmaadmin'@'localhost';
+GRANT ALL PRIVILEGES ON *.* TO 'pmaadmin'@'localhost' IDENTIFIED BY '###PASSWORD###' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+
+## PHP
+apt install php-mbstring php-zip php-gd php-json php-curl
+
+
+## DB
+mysql -u pmaadmin -p phpmyadmin < /usr/share/phpmyadmin-5.2.0/sql/create_tables.sql
+
+
+## Prepare to config
+mkdir -p /etc/phpmyadmin-5.2.0
+rm -rf /etc/phpmyadmin
+ln -s -r /etc/phpmyadmin-5.2.0 /etc/phpmyadmin
+cp /usr/share/phpmyadmin-5.2.0/config* /etc/phpmyadmin-5.2.0/
+#openssl rand -base64 24 >> config.inc.php
+#set blowfish
+#set control user
+#set temp dir
+ln -s -r /etc/phpmyadmin/config.inc.php /usr/share/phpmyadmin-5.2.0/
+
+
+## Get Composer
+cd /usr/share/phpmyadmin
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+#php -r "if (hash_file('sha384', 'composer-setup.php') === '55ce33d7678c5a611085589f1f3ddf8b3c52d662cd01d4ba75c0ee0459970c2200a51f492d557530c71c15d8dba01eae') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+php composer-setup.php
+php -r "unlink('composer-setup.php');"
+
+
+## Plugin installs
+./composer.phar self-update
+./composer.phar update
+
+
+## Symlink Phpmyadmin
+ln -s -r /usr/share/phpmyadmin/* /var/www/apps/phpmyadmin/
+rm -rf /var/www/apps/phpmyadmin/doc
+rm -rf /var/www/apps/phpmyadmin/examples
+rm -rf /var/www/apps/phpmyadmin/setup
+rm -rf /var/www/apps/phpmyadmin/sql
